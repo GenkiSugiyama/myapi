@@ -1,23 +1,22 @@
 package main
 
 import (
-	"io"
 	"log"
 	"net/http"
+
+	"github.com/GenkiSugiyama/myapi/handlers"
 )
 
 func main() {
-	// リクエストを受け取って任意のレスポンスを書き込むための関数型ハンドラを宣言する
-	helloHandler := func(w http.ResponseWriter, r *http.Request) {
-		// どのようなレスポンスを返すのかを記述する
-		// http.ResponseWriterに対してHello, world!と書き込む
-		io.WriteString(w, "Hello, world!\n")
-	}
-
 	// ハンドラを宣言し変数に格納しただけではそのハンドラは使われない
 	// サーバーで特定のハンドラを動かすための設定が必要になる
 	// http.HandleFunc関数を使って、特定のパスに対してハンドラを紐付ける
-	http.HandleFunc("/", helloHandler)
+	http.HandleFunc("/hello", handlers.HelloHandler)
+	http.HandleFunc("/article", handlers.PostArticleHandler)
+	http.HandleFunc("/article/list", handlers.ArticleListHandler)
+	http.HandleFunc("/article/1", handlers.ArticleDetailHandler)
+	http.HandleFunc("/article/nice", handlers.PostNiceHandler)
+	http.HandleFunc("/comment", handlers.PostCommentHandler)
 
 	log.Println("server start at port 8080")
 
