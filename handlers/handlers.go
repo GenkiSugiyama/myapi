@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 // リクエストを受け取って任意のレスポンスを書き込むための関数型ハンドラを宣言する
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
-	// どのようなレスポンスを返すのかを記述する
-	// http.ResponseWriterに対してHello, world!と書き込む
 	io.WriteString(w, "Hello, world!\n")
 }
 
@@ -22,7 +23,14 @@ func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
-	articleID := 1
+	// パスパラメータを取得するためにmux.Vars()を使用する
+	// mux.Vars()はmap[string]string型を返すので、パスパラメータの名前をキーにして値を取得する
+	// 取得したパスパラメータは文字列型なので、数値として扱うために変換処理を行う
+	articleID, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		http.Error(w, "Invalid path parameter", http.StatusBadRequest)
+		return
+	}
 	resString := fmt.Sprintf("Article Detail: No.%d\n", articleID)
 	io.WriteString(w, resString)
 }
