@@ -19,7 +19,24 @@ func PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Article List\n")
+	// *URL.Query()はクエリパラーメータのKeyとKeyに対応するValueを持つmap[string]][]string型を返す
+	queryMap := r.URL.Query()
+
+	var page int
+	// クエリパラメーターのキーに対応する文字列型のスライスをpに格納する、取得できたら第二変数にtrueが返ってくる
+	if p, ok := queryMap["page"]; ok && len(p) > 0 {
+		var err error
+		page, err = strconv.Atoi(p[0])
+		if err != nil {
+			http.Error(w, "Invalide query parameter", http.StatusBadRequest)
+			return
+		}
+	} else {
+		page = 1
+	}
+
+	resString := fmt.Sprintf("Article List (page %d)\n", page)
+	io.WriteString(w, resString)
 }
 
 func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
