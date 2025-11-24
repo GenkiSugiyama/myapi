@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,40 +17,19 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PostArticleHandler(w http.ResponseWriter, r *http.Request) {
-	// リクエストボディを受け取るためのバイトスライスを用意する
-	// ヘッダーのContent-lengthからリクエストボディの長さを取得し、
-	// その長さ分のバイトスライスを作成する
-	length, err := strconv.Atoi(r.Header.Get("Content-Length"))
-	if err != nil {
-		http.Error(w, "fail to get content length\n", http.StatusBadRequest)
-		return
-	}
-	reqBodybuffer := make([]byte, length)
-
-	// Request.Body.Read()でリクエストボディの内容をreqBodybufferに読み込む
-	// Read()はファイルの読み込みが完了した際にio.EOFエラーを返すため、errors.Is()でio.EOFかどうかを確認し
-	// io.EOF以外のエラーの場合は失敗とみなして500エラーを返す
-	if _, err := r.Body.Read(reqBodybuffer); !errors.Is(err, io.EOF) {
-		http.Error(w, "fail to get request body\n", http.StatusInternalServerError)
-		return
-	}
-	// Read()で読み込んだボディはCloseする必要があるので必ず閉じるためにdeferを使ってメソッドを呼び出している
-	defer r.Body.Close()
-
 	var reqArticle models.Article
-	if err := json.Unmarshal(reqBodybuffer, &reqArticle); err != nil {
+	// json.NewDecoder()の引数にr.Bodyを渡してBody内のJSONデータをreqArticleにデコードする
+	// json.Unmarshal()の場合は、デコード対象をメモリに格納する必要があるため、バイトスライスを用意しそこに内容を格納↓
+	// その後デコードする必要があった
+	// デコーダを使用することで、r.Bodyというストリームから直接デコードできるようになる
+	if err := json.NewDecoder(r.Body).Decode(&reqArticle); err != nil {
 		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
 		return
 	}
 
 	article := reqArticle
-	jsonData, err := json.Marshal(article)
-	if err != nil {
-		http.Error(w, "fail to encode json\n", http.StatusInternalServerError)
-		return
-	}
 
-	w.Write(jsonData)
+	json.NewEncoder(w).Encode(article)
 }
 
 func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,14 +50,12 @@ func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	articleLists := []models.Article{models.Article1, models.Article2}
-	jsonData, err := json.Marshal(articleLists)
-	if err != nil {
+
+	if err := json.NewEncoder(w).Encode(articleLists); err != nil {
 		errMsg := fmt.Sprintf("fail to encode json (page: %d)", page)
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
-
-	w.Write(jsonData)
 }
 
 func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,42 +68,44 @@ func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	articleList := []models.Article{models.Article1, models.Article2}
-	var targetArticle models.Article
-	for _, article := range articleList {
-		if article.ID == articleID {
-			targetArticle = article
-			break
-		}
-	}
-
-	jsonData, err := json.Marshal(targetArticle)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(models.Article1); err != nil {
 		errMsg := fmt.Sprintf("fail to encode json (articleID: %d)", articleID)
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 
-	w.Write(jsonData)
+	// articleList := []models.Article{models.Article1, models.Article2}
+	// var targetArticle models.Article
+	// for _, article := range articleList {
+	// 	if article.ID == articleID {
+	// 		targetArticle = article
+	// 		break
+	// 	}
+	// }
+
+	// if err := json.NewEncoder(w).Encode(targetArticle); err != nil {
+	// 	errMsg := fmt.Sprintf("fail to encode json (articleID: %d)", articleID)
+	// 	http.Error(w, errMsg, http.StatusInternalServerError)
+	// 	return
+	// }
 }
 
 func PostNiceHandler(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Posting Nice...\n")
-	jsonData, err := json.Marshal(models.Article1)
-	if err != nil {
-		http.Error(w, "fail to encode json", http.StatusInternalServerError)
+	var reqArticle models.Article
+	if err := json.NewDecoder(r.Body).Decode(&reqArticle); err != nil {
+		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
 		return
 	}
 
-	w.Write(jsonData)
+	json.NewEncoder(w).Encode(reqArticle)
 }
 
 func PostCommentHandler(w http.ResponseWriter, r *http.Request) {
-	jsonData, err := json.Marshal(models.Comment1)
-	if err != nil {
-		http.Error(w, "fail to encode json", http.StatusInternalServerError)
+	var reqComment models.Comment
+	if err := json.NewDecoder(r.Body).Decode(&reqComment); err != nil {
+		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
 		return
 	}
 
-	w.Write(jsonData)
+	json.NewEncoder(w).Encode(reqComment)
 }
