@@ -21,7 +21,7 @@ var (
 var (
 	Article1 = Article{
 		ID:          1,
-		Titile:      "first article",
+		Title:       "first article",
 		Contents:    "this is the first article.",
 		UserName:    "genki",
 		NiceNum:     1,
@@ -31,7 +31,7 @@ var (
 
 	Article2 = Article{
 		ID:        2,
-		Titile:    "second article",
+		Title:     "second article",
 		Contents:  "this is the second article.",
 		UserName:  "genki",
 		NiceNum:   2,
