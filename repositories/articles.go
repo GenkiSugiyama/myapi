@@ -63,7 +63,7 @@ func FindArticles(db *sql.DB, page int) ([]models.Article, error) {
 	return articles, nil
 }
 
-func GetArticleByID(db *sql.DB, articleID int) (models.Article, error) {
+func GetArticleDetailByID(db *sql.DB, articleID int) (models.Article, error) {
 	const sqlStr = `
 		SELECT title, contents, username, nice, created_at
 		FROM articles
