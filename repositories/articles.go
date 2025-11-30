@@ -67,7 +67,7 @@ func GetArticleDetailByID(db *sql.DB, articleID int) (models.Article, error) {
 	const sqlStr = `
 		SELECT title, contents, username, nice, created_at
 		FROM articles
-		WHERE id = ?
+		WHERE article_id = ?
 	`
 
 	// クエリ結果が0 or 1件の場合はQueryRowを使用する
@@ -105,7 +105,7 @@ func UpdateArticleNice(db *sql.DB, articleID int) error {
 	const selectQueryStr = `
 		SELECT nice
 		FROM articles
-		WHERE id = ?;
+		WHERE article_id = ?;
 	`
 
 	// クエリの実施やスキャン処理でエラーが発生した場合は、tx.Rollback()でトランザクションを取り消す
@@ -125,7 +125,7 @@ func UpdateArticleNice(db *sql.DB, articleID int) error {
 	const updateQueryStr = `
 		Update articles
 		SET nice = ?
-		WHERE id = ?;
+		WHERE article_id = ?;
 	`
 	_, err = tx.Exec(updateQueryStr, niceNum+1, articleID)
 	if err != nil {
