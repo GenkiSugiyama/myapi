@@ -37,7 +37,7 @@ func FindArticles(db *sql.DB, page int) ([]models.Article, error) {
 	// 先にクエリ文字列を定義する
 	// 値を動的に設定したい箇所は?でプレースホルダを設定する（MySQL）
 	const sqlStr = `
-		SELECT title, contents, username, nice
+		SELECT article_id, title, contents, username, nice
 		FROM articles
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?;
@@ -51,13 +51,20 @@ func FindArticles(db *sql.DB, page int) ([]models.Article, error) {
 	}
 	defer rows.Close()
 
-	articles := make([]models.Article, ArticlesPerPage)
+	articles := make([]models.Article, 0)
 	// rows.Next()で読み出すレコードがなくなるまで構造体への格納処理を繰り返す
 	for rows.Next() {
 		// 格納先となる構造体を用意し、rows.Scan()でフィールドに値をセットする
 		// この時ポインタ型のフィールドを渡しているのは、用意したメモリ領域に値を書き込むため
 		var article models.Article
-		rows.Scan(&article.Title, &article.Contents, &article.UserName, &article.NiceNum)
+		// Scanで取得するカラムの個数・順番はSELECT句で指定した個数・順番と同じにする必要がある
+		// ここではcreated_atカラムを取得していないため、構造体のCreatedAtフィールドには値がセットされない
+		// 順番や個数が異なるとセットする値の型が違ったりしてエラーになったり意図しない値がセットされたりする
+		err := rows.Scan(&article.ID, &article.Title, &article.Contents, &article.UserName, &article.NiceNum)
+		if err != nil {
+			return nil, err
+		}
+
 		articles = append(articles, article)
 	}
 	return articles, nil
@@ -65,7 +72,7 @@ func FindArticles(db *sql.DB, page int) ([]models.Article, error) {
 
 func GetArticleDetailByID(db *sql.DB, articleID int) (models.Article, error) {
 	const sqlStr = `
-		SELECT title, contents, username, nice, created_at
+		SELECT article_id, title, contents, username, nice, created_at
 		FROM articles
 		WHERE article_id = ?
 	`
@@ -82,7 +89,7 @@ func GetArticleDetailByID(db *sql.DB, articleID int) (models.Article, error) {
 	// rows.Scan, row.ScanではNull許可のカラムのNull値をそのままフィールドにセットできない
 	//　Nullかもしれない値を受け取るために、sql.NullTimeでcreated_atの値を受け取る
 	// sql.NullTime.ValidでNullかどうかを判定し、Validがtrueの場合にのみTimeフィールドの値を構造体のフィールドにセットする
-	err := row.Scan(&article.Title, &article.Contents, &article.UserName, &article.NiceNum, &createdAt)
+	err := row.Scan(&article.ID, &article.Title, &article.Contents, &article.UserName, &article.NiceNum, &createdAt)
 	if err != nil {
 		return models.Article{}, err
 	}

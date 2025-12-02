@@ -8,7 +8,7 @@ import (
 
 func FindArticleCommentsByArticleID(db *sql.DB, articleID int) ([]models.Comment, error) {
 	const sqlStr = `
-		SELECT message, created_at
+		SELECT comment_id, article_id, message, created_at
 		FROM comments
 		WHERE article_id = ?
 	`
@@ -23,7 +23,7 @@ func FindArticleCommentsByArticleID(db *sql.DB, articleID int) ([]models.Comment
 	for rows.Next() {
 		var comment models.Comment
 		var createdAt sql.NullTime
-		err := rows.Scan(&comment.Message, &createdAt)
+		err := rows.Scan(&comment.CommentID, &comment.ArticleID, &comment.Message, &createdAt)
 		if err != nil {
 			return nil, err
 		}
