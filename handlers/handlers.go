@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/GenkiSugiyama/myapi/models"
+	"github.com/GenkiSugiyama/myapi/services"
 	"github.com/gorilla/mux"
 )
 
@@ -27,9 +28,16 @@ func PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	article := reqArticle
+	article, err := services.PostArticleService(reqArticle)
+	if err != nil {
+		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		return
+	}
 
-	json.NewEncoder(w).Encode(article)
+	if err = json.NewEncoder(w).Encode(article); err != nil {
+		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
+		return
+	}
 }
 
 func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +57,11 @@ func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	articleLists := []models.Article{models.Article1, models.Article2}
+	articleLists, err := services.ArticleListService(page)
+	if err != nil {
+		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		return
+	}
 
 	if err := json.NewEncoder(w).Encode(articleLists); err != nil {
 		errMsg := fmt.Sprintf("fail to encode json (page: %d)", page)
@@ -68,26 +80,17 @@ func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(models.Article1); err != nil {
-		errMsg := fmt.Sprintf("fail to encode json (articleID: %d)", articleID)
-		http.Error(w, errMsg, http.StatusInternalServerError)
+	article, err := services.GetArticleService(articleID)
+	if err != nil {
+		http.Error(w, "faild internal exec\n", http.StatusInternalServerError)
 		return
 	}
 
-	// articleList := []models.Article{models.Article1, models.Article2}
-	// var targetArticle models.Article
-	// for _, article := range articleList {
-	// 	if article.ID == articleID {
-	// 		targetArticle = article
-	// 		break
-	// 	}
-	// }
-
-	// if err := json.NewEncoder(w).Encode(targetArticle); err != nil {
-	// 	errMsg := fmt.Sprintf("fail to encode json (articleID: %d)", articleID)
-	// 	http.Error(w, errMsg, http.StatusInternalServerError)
-	// 	return
-	// }
+	if err := json.NewEncoder(w).Encode(article); err != nil {
+		errMsg := fmt.Sprintf("fail to encode json (articleID: %d)", article.ID)
+		http.Error(w, errMsg, http.StatusInternalServerError)
+		return
+	}
 }
 
 func PostNiceHandler(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +100,16 @@ func PostNiceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(reqArticle)
+	article, err := services.PostNiceService(reqArticle)
+	if err != nil {
+		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(article); err != nil {
+		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
+		return
+	}
 }
 
 func PostCommentHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,5 +119,14 @@ func PostCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(reqComment)
+	comment, err := services.PostCommentService(reqComment)
+	if err != nil {
+		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(comment); err != nil {
+		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
+		return
+	}
 }
