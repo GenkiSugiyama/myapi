@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/GenkiSugiyama/myapi/apperrors"
 	"github.com/GenkiSugiyama/myapi/controllers/services"
 	"github.com/GenkiSugiyama/myapi/models"
 )
@@ -19,18 +20,20 @@ func NewCommentController(s services.CommentServicer) *CommentController {
 func (c *CommentController) PostCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var reqComment models.Comment
 	if err := json.NewDecoder(r.Body).Decode(&reqComment); err != nil {
-		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
+		err = apperrors.ReqBodyDecodeFailed.Wrap(err, "bad request body")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	comment, err := c.service.PostCommentService(reqComment)
 	if err != nil {
-		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	if err = json.NewEncoder(w).Encode(comment); err != nil {
-		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
+		err = apperrors.StructEncodeFailed.Wrap(err, "bad struct")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 }

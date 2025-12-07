@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
+	"github.com/GenkiSugiyama/myapi/apperrors"
 	"github.com/GenkiSugiyama/myapi/controllers/services"
 	"github.com/GenkiSugiyama/myapi/models"
 	"github.com/gorilla/mux"
@@ -31,7 +31,8 @@ func (c *ArticleController) PostArticleHandler(w http.ResponseWriter, r *http.Re
 	// その後デコードする必要があった
 	// デコーダを使用することで、r.Bodyというストリームから直接デコードできるようになる
 	if err := json.NewDecoder(r.Body).Decode(&reqArticle); err != nil {
-		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
+		err = apperrors.ReqBodyDecodeFailed.Wrap(err, "bad request body")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
@@ -39,12 +40,13 @@ func (c *ArticleController) PostArticleHandler(w http.ResponseWriter, r *http.Re
 	// MyAppService.PostArticleService()メソッドを呼び出して記事投稿処理を実行する
 	article, err := c.service.PostArticleService(reqArticle)
 	if err != nil {
-		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	if err = json.NewEncoder(w).Encode(article); err != nil {
-		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
+		err = apperrors.StructEncodeFailed.Wrap(err, "bad struct")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 }
@@ -59,7 +61,8 @@ func (c *ArticleController) ArticleListHandler(w http.ResponseWriter, r *http.Re
 		var err error
 		page, err = strconv.Atoi(p[0])
 		if err != nil {
-			http.Error(w, "Invalide query parameter", http.StatusBadRequest)
+			err = apperrors.BadParam.Wrap(err, "queryparam must be number")
+			apperrors.ErrorHandler(w, r, err)
 			return
 		}
 	} else {
@@ -68,13 +71,13 @@ func (c *ArticleController) ArticleListHandler(w http.ResponseWriter, r *http.Re
 
 	articleLists, err := c.service.ArticleListService(page)
 	if err != nil {
-		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	if err := json.NewEncoder(w).Encode(articleLists); err != nil {
-		errMsg := fmt.Sprintf("fail to encode json (page: %d)", page)
-		http.Error(w, errMsg, http.StatusInternalServerError)
+		err = apperrors.StructEncodeFailed.Wrap(err, "bad struct")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 }
@@ -85,19 +88,20 @@ func (c *ArticleController) ArticleDetailHandler(w http.ResponseWriter, r *http.
 	// 取得したパスパラメータは文字列型なので、数値として扱うために変換処理を行う
 	articleID, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
-		http.Error(w, "Invalid path parameter", http.StatusBadRequest)
+		err = apperrors.BadParam.Wrap(err, "queryparam must be number")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	article, err := c.service.GetArticleService(articleID)
 	if err != nil {
-		http.Error(w, "faild internal exec\n", http.StatusInternalServerError)
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	if err := json.NewEncoder(w).Encode(article); err != nil {
-		errMsg := fmt.Sprintf("fail to encode json (articleID: %d)", article.ID)
-		http.Error(w, errMsg, http.StatusInternalServerError)
+		err = apperrors.StructEncodeFailed.Wrap(err, "bad struct")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 }
@@ -105,18 +109,20 @@ func (c *ArticleController) ArticleDetailHandler(w http.ResponseWriter, r *http.
 func (c *ArticleController) PostNiceHandler(w http.ResponseWriter, r *http.Request) {
 	var reqArticle models.Article
 	if err := json.NewDecoder(r.Body).Decode(&reqArticle); err != nil {
-		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
+		err = apperrors.ReqBodyDecodeFailed.Wrap(err, "bad request body")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	article, err := c.service.PostNiceService(reqArticle)
 	if err != nil {
-		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 
 	if err = json.NewEncoder(w).Encode(article); err != nil {
-		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
+		err = apperrors.StructEncodeFailed.Wrap(err, "bad struct")
+		apperrors.ErrorHandler(w, r, err)
 		return
 	}
 }
