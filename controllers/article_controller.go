@@ -7,25 +7,24 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/GenkiSugiyama/myapi/controllers/services"
 	"github.com/GenkiSugiyama/myapi/models"
-	"github.com/GenkiSugiyama/myapi/services"
 	"github.com/gorilla/mux"
 )
 
-type MyAppController struct {
-	service *services.MyAppService
+type ArticleController struct {
+	service services.ArticleServicer
 }
 
-func NewMyAppController(s *services.MyAppService) *MyAppController {
-	return &MyAppController{service: s}
+func NewArticleController(s services.ArticleServicer) *ArticleController {
+	return &ArticleController{service: s}
 }
 
-// リクエストを受け取って任意のレスポンスを書き込むための関数型ハンドラを宣言する
-func (c *MyAppController) HelloHandler(w http.ResponseWriter, r *http.Request) {
+func (c *ArticleController) HelloHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Hello, world!\n")
 }
 
-func (c *MyAppController) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
+func (c *ArticleController) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 	var reqArticle models.Article
 	// json.NewDecoder()の引数にr.Bodyを渡してBody内のJSONデータをreqArticleにデコードする
 	// json.Unmarshal()の場合は、デコード対象をメモリに格納する必要があるため、バイトスライスを用意しそこに内容を格納↓
@@ -50,7 +49,7 @@ func (c *MyAppController) PostArticleHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (c *MyAppController) ArticleListHandler(w http.ResponseWriter, r *http.Request) {
+func (c *ArticleController) ArticleListHandler(w http.ResponseWriter, r *http.Request) {
 	// *URL.Query()はクエリパラーメータのKeyとKeyに対応するValueを持つmap[string]][]string型を返す
 	queryMap := r.URL.Query()
 
@@ -80,7 +79,7 @@ func (c *MyAppController) ArticleListHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (c *MyAppController) ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
+func (c *ArticleController) ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
 	// パスパラメータを取得するためにmux.Vars()を使用する
 	// mux.Vars()はmap[string]string型を返すので、パスパラメータの名前をキーにして値を取得する
 	// 取得したパスパラメータは文字列型なので、数値として扱うために変換処理を行う
@@ -103,7 +102,7 @@ func (c *MyAppController) ArticleDetailHandler(w http.ResponseWriter, r *http.Re
 	}
 }
 
-func (c *MyAppController) PostNiceHandler(w http.ResponseWriter, r *http.Request) {
+func (c *ArticleController) PostNiceHandler(w http.ResponseWriter, r *http.Request) {
 	var reqArticle models.Article
 	if err := json.NewDecoder(r.Body).Decode(&reqArticle); err != nil {
 		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
@@ -117,25 +116,6 @@ func (c *MyAppController) PostNiceHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if err = json.NewEncoder(w).Encode(article); err != nil {
-		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
-		return
-	}
-}
-
-func (c *MyAppController) PostCommentHandler(w http.ResponseWriter, r *http.Request) {
-	var reqComment models.Comment
-	if err := json.NewDecoder(r.Body).Decode(&reqComment); err != nil {
-		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
-		return
-	}
-
-	comment, err := c.service.PostCommentService(reqComment)
-	if err != nil {
-		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
-		return
-	}
-
-	if err = json.NewEncoder(w).Encode(comment); err != nil {
 		http.Error(w, "failed to encode json\n", http.StatusInternalServerError)
 		return
 	}
