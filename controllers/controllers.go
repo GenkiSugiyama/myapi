@@ -1,4 +1,4 @@
-package handlers
+package controllers
 
 import (
 	"encoding/json"
@@ -12,12 +12,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type MyAppController struct {
+	service *services.MyAppService
+}
+
+func NewMyAppController(s *services.MyAppService) *MyAppController {
+	return &MyAppController{service: s}
+}
+
 // リクエストを受け取って任意のレスポンスを書き込むための関数型ハンドラを宣言する
-func HelloHandler(w http.ResponseWriter, r *http.Request) {
+func (c *MyAppController) HelloHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Hello, world!\n")
 }
 
-func PostArticleHandler(w http.ResponseWriter, r *http.Request) {
+func (c *MyAppController) PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 	var reqArticle models.Article
 	// json.NewDecoder()の引数にr.Bodyを渡してBody内のJSONデータをreqArticleにデコードする
 	// json.Unmarshal()の場合は、デコード対象をメモリに格納する必要があるため、バイトスライスを用意しそこに内容を格納↓
@@ -28,7 +36,9 @@ func PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	article, err := services.PostArticleService(reqArticle)
+	// MyAppService構造体を取得
+	// MyAppService.PostArticleService()メソッドを呼び出して記事投稿処理を実行する
+	article, err := c.service.PostArticleService(reqArticle)
 	if err != nil {
 		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
 		return
@@ -40,7 +50,7 @@ func PostArticleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
+func (c *MyAppController) ArticleListHandler(w http.ResponseWriter, r *http.Request) {
 	// *URL.Query()はクエリパラーメータのKeyとKeyに対応するValueを持つmap[string]][]string型を返す
 	queryMap := r.URL.Query()
 
@@ -57,7 +67,7 @@ func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	articleLists, err := services.ArticleListService(page)
+	articleLists, err := c.service.ArticleListService(page)
 	if err != nil {
 		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
 		return
@@ -70,7 +80,7 @@ func ArticleListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
+func (c *MyAppController) ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
 	// パスパラメータを取得するためにmux.Vars()を使用する
 	// mux.Vars()はmap[string]string型を返すので、パスパラメータの名前をキーにして値を取得する
 	// 取得したパスパラメータは文字列型なので、数値として扱うために変換処理を行う
@@ -80,7 +90,7 @@ func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	article, err := services.GetArticleService(articleID)
+	article, err := c.service.GetArticleService(articleID)
 	if err != nil {
 		http.Error(w, "faild internal exec\n", http.StatusInternalServerError)
 		return
@@ -93,14 +103,14 @@ func ArticleDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func PostNiceHandler(w http.ResponseWriter, r *http.Request) {
+func (c *MyAppController) PostNiceHandler(w http.ResponseWriter, r *http.Request) {
 	var reqArticle models.Article
 	if err := json.NewDecoder(r.Body).Decode(&reqArticle); err != nil {
 		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
 		return
 	}
 
-	article, err := services.PostNiceService(reqArticle)
+	article, err := c.service.PostNiceService(reqArticle)
 	if err != nil {
 		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
 		return
@@ -112,14 +122,14 @@ func PostNiceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func PostCommentHandler(w http.ResponseWriter, r *http.Request) {
+func (c *MyAppController) PostCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var reqComment models.Comment
 	if err := json.NewDecoder(r.Body).Decode(&reqComment); err != nil {
 		http.Error(w, "fail to decode json\n", http.StatusBadRequest)
 		return
 	}
 
-	comment, err := services.PostCommentService(reqComment)
+	comment, err := c.service.PostCommentService(reqComment)
 	if err != nil {
 		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
 		return
