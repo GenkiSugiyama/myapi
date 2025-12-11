@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
+	"github.com/GenkiSugiyama/myapi/api/middlewares"
 	"github.com/GenkiSugiyama/myapi/controllers"
 	"github.com/GenkiSugiyama/myapi/services"
 	"github.com/gorilla/mux"
@@ -24,6 +25,9 @@ func NewRouter(db *sql.DB) *mux.Router {
 	r.HandleFunc("/article/nice", aCon.PostNiceHandler).Methods(http.MethodPost)
 
 	r.HandleFunc("/comment", cCon.PostCommentHandler).Methods(http.MethodPost)
+
+	// r.HandleFuncでパスとハンドラの対応付けをおこなった後にr.Useで全てのハンドラの処理の前後にミドルウェアの処理が行われる
+	r.Use(middlewares.LoggingMiddleware)
 
 	return r
 }
