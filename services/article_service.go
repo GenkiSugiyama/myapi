@@ -35,22 +35,31 @@ func (s *MyAppService) ArticleListService(page int) ([]models.Article, error) {
 }
 
 func (s *MyAppService) GetArticleService(articleID int) (models.Article, error) {
-	article, err := repositories.GetArticleDetailByID(s.db, articleID)
-	if err != nil {
+	var article models.Article
+	var commentList []models.Comment
+	var articleGetErr, commentGetErr error
+
+	// メインゴルーチンで定義した変数を直接別のゴルーチンで参照してしまうのは競合状態になる可能性があるため避けるべき
+	go func() {
+		article, articleGetErr = repositories.GetArticleDetailByID(s.db, articleID)
+	}()
+
+	go func() {
+		commentList, commentGetErr = repositories.FindArticleCommentsByArticleID(s.db, articleID)
+	}()
+	if articleGetErr != nil {
 		// 1件もデータが取得されたなかった場合のエラーハンドリング
-		if errors.Is(err, sql.ErrNoRows) {
-			err = apperrors.NAData.Wrap(err, "no data")
+		if errors.Is(articleGetErr, sql.ErrNoRows) {
+			err := apperrors.NAData.Wrap(articleGetErr, "no data")
 			return models.Article{}, err
 		}
 		// それ以外はDB接続等の環境的なエラーとして扱う
-		err = apperrors.GetDataFailed.Wrap(err, "fail to get data")
-
+		err := apperrors.GetDataFailed.Wrap(articleGetErr, "fail to get data")
 		return models.Article{}, err
 	}
 
-	commentList, err := repositories.FindArticleCommentsByArticleID(s.db, articleID)
-	if err != nil {
-		err = apperrors.GetDataFailed.Wrap(err, "fail to get data")
+	if commentGetErr != nil {
+		err := apperrors.GetDataFailed.Wrap(commentGetErr, "fail to get data")
 		return models.Article{}, err
 	}
 
