@@ -3,7 +3,6 @@ package services
 import (
 	"database/sql"
 	"errors"
-	"sync"
 
 	"github.com/GenkiSugiyama/myapi/apperrors"
 	"github.com/GenkiSugiyama/myapi/models"
@@ -40,28 +39,47 @@ func (s *MyAppService) GetArticleService(articleID int) (models.Article, error) 
 	var commentList []models.Comment
 	var articleGetErr, commentGetErr error
 
-	var aMux sync.Mutex
-	var cMux sync.Mutex
+	// 別ゴルーチンでリポジトリ層の関数を動かしたい
+	// 1つのチャネルで送受信できる型は一つだけ
+	// リポジトリ層の関数は2つの型を返す
+	// 2つの型を扱う構造体を新たに定義し、その構造体の型を元にしたチャネルを作るこで戻り値が複数ある関数をゴルーチンで扱えるようにする
+	type articleResult struct {
+		article models.Article
+		err     error
+	}
+	// 自分で定義したarticleResult型のチャネルを用意する
+	articleChan := make(chan articleResult)
+	defer close(articleChan)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	// ゴルーチン内でリポジトリ層の関数を呼び出し、受け取った2つの戻り値を定義した構造体に詰めて
+	// その構造体を元にしたチャネルに送信している
+	go func(ch chan<- articleResult, db *sql.DB, articleID int) {
+		article, err := repositories.GetArticleDetailByID(db, articleID)
+		ch <- articleResult{article: article, err: err}
+	}(articleChan, s.db, articleID)
 
-	// メインゴルーチンで定義した変数を直接別のゴルーチンで参照してしまうのは競合状態になる可能性があるため避けるべき
-	go func(db *sql.DB, articleID int) {
-		defer wg.Done()
-		aMux.Lock()
-		article, articleGetErr = repositories.GetArticleDetailByID(db, articleID)
-		aMux.Unlock()
-	}(s.db, articleID)
+	type commentResult struct {
+		commentList *[]models.Comment
+		err         error
+	}
+	commentChan := make(chan commentResult)
+	defer close(commentChan)
 
-	go func(db *sql.DB, articleID int) {
-		defer wg.Done()
-		cMux.Lock()
-		commentList, commentGetErr = repositories.FindArticleCommentsByArticleID(db, articleID)
-		cMux.Unlock()
-	}(s.db, articleID)
+	go func(ch chan<- commentResult, db *sql.DB, articleID int) {
+		commentList, err := repositories.FindArticleCommentsByArticleID(db, articleID)
+		ch <- commentResult{commentList: &commentList, err: err}
+	}(commentChan, s.db, articleID)
 
-	wg.Wait()
+	// article用のゴルーチンとcommentList用のゴルーチン、どちらが先に処理を終えるかはわからない
+	// チャネルの数分select文をループして、送信の準備ができたチャネルの値から受信するようにしている
+	for i := 0; i < 2; i++ {
+		select {
+		case ar := <-articleChan:
+			article, articleGetErr = ar.article, ar.err
+		case cr := <-commentChan:
+			commentList, commentGetErr = *cr.commentList, cr.err
+		}
+	}
 
 	if articleGetErr != nil {
 		// 1件もデータが取得されたなかった場合のエラーハンドリング
