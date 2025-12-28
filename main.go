@@ -11,6 +11,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+// os.Getenv()は実行時に指定された環境変数の値を取得する
+// 　ファイルから自動で読み込む機能ではないので、go run main.goの時に直接環境変数を指定する必要がある
 var (
 	dbUser     = os.Getenv("DB_USER")
 	dbPassword = os.Getenv("DB_PASSWORD")
@@ -23,6 +25,7 @@ func main() {
 	if err != nil {
 		log.Printf("failed to connect DB: %v\n", err)
 	}
+	log.Printf("DB_NAME: %s, DB_USER: %s, DB_PASSWORD: %s", dbDatabase, dbUser, dbPassword)
 
 	// controller層の構造体の具体的な生成処理をルータ層に移したことによってmain.goがアプリケーションの起動に必要な処理だけになった
 	r := api.NewRouter(db)
