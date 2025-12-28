@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"errors"
+	"sync"
 
 	"github.com/GenkiSugiyama/myapi/apperrors"
 	"github.com/GenkiSugiyama/myapi/models"
@@ -39,14 +40,29 @@ func (s *MyAppService) GetArticleService(articleID int) (models.Article, error) 
 	var commentList []models.Comment
 	var articleGetErr, commentGetErr error
 
-	// メインゴルーチンで定義した変数を直接別のゴルーチンで参照してしまうのは競合状態になる可能性があるため避けるべき
-	go func() {
-		article, articleGetErr = repositories.GetArticleDetailByID(s.db, articleID)
-	}()
+	var aMux sync.Mutex
+	var cMux sync.Mutex
 
-	go func() {
-		commentList, commentGetErr = repositories.FindArticleCommentsByArticleID(s.db, articleID)
-	}()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// メインゴルーチンで定義した変数を直接別のゴルーチンで参照してしまうのは競合状態になる可能性があるため避けるべき
+	go func(db *sql.DB, articleID int) {
+		defer wg.Done()
+		aMux.Lock()
+		article, articleGetErr = repositories.GetArticleDetailByID(db, articleID)
+		aMux.Unlock()
+	}(s.db, articleID)
+
+	go func(db *sql.DB, articleID int) {
+		defer wg.Done()
+		cMux.Lock()
+		commentList, commentGetErr = repositories.FindArticleCommentsByArticleID(db, articleID)
+		cMux.Unlock()
+	}(s.db, articleID)
+
+	wg.Wait()
+
 	if articleGetErr != nil {
 		// 1件もデータが取得されたなかった場合のエラーハンドリング
 		if errors.Is(articleGetErr, sql.ErrNoRows) {
